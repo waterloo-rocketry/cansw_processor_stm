@@ -25,6 +25,7 @@
 /* USER CODE BEGIN Includes */
 #include <stdio.h>
 #include "canlib.h"
+#include "message_buffer.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -121,6 +122,13 @@ const osEventFlagsAttr_t eventTest_attributes = {
 };
 /* USER CODE BEGIN PV */
 uint32_t idx;
+
+// Initialize message buffer for "Alive" messages from each thread
+MessageBufferHandle_t xStatusMessageBuffer;
+const size_t xStatusMessageBufferSizeBytes = 100;
+
+// string to hold RTC time
+char time [10];
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -150,6 +158,19 @@ void flightPhaseTask(void *argument);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+void get_time(void)
+{
+ RTC_DateTypeDef gDate;
+ RTC_TimeTypeDef gTime;
+/* Get the RTC current Time */
+ HAL_RTC_GetTime(&hrtc, &gTime, RTC_FORMAT_BIN);
+ /* Get the RTC current Date */
+ // YOu have to do this in order for HAL_RTC_GetTime to work
+  HAL_RTC_GetDate(&hrtc, &gDate, RTC_FORMAT_BIN);
+/* Display time Format: hh:mm:ss */
+ sprintf((char*)time,"[%02d:%02d:%02d] ",gTime.Hours, gTime.Minutes, gTime.Seconds);
+}
+
 
 /* USER CODE END 0 */
 
@@ -195,6 +216,9 @@ int main(void)
   MX_UART4_Init();
   MX_FATFS_Init();
   /* USER CODE BEGIN 2 */
+
+  // Create "Alive" message buffer
+  xStatusMessageBuffer = xMessageBufferCreate(xStatusMessageBufferSizeBytes);
 
   /* USER CODE END 2 */
 
@@ -819,12 +843,26 @@ void StartDefaultTask(void *argument)
 	/* Infinite loop */
 	for(;;)
 	{
+		// Print time
+		get_time();
+		HAL_UART_Transmit(&huart4, (char*)time, strlen((char*)time), HAL_MAX_DELAY);
+
+		// Read statusMessageBuffer and print all "Alive" messages
+		uint8_t ucStatusData[23];
+		const TickType_t xBlockTime = pdMS_TO_TICKS(20);
+		xMessageBufferReceive(xStatusMessageBuffer, (void*) ucStatusData, sizeof(ucStatusData), xBlockTime);
+		HAL_UART_Transmit(&huart4, ucStatusData, sizeof(ucStatusData), HAL_MAX_DELAY);
+
+
 		/*sprintf ((char *)TxData, "CANTX%d", indx++);
 
 		if (HAL_FDCAN_AddMessageToTxFifoQ(&hfdcan1, &TxHeader, TxData)!= HAL_OK)
 		{
 		Error_Handler();
 		}*/
+
+
+
 		HAL_GPIO_WritePin(GPIOB, GPIO_PIN_5, LED_state);
 		LED_state = !LED_state;
 
@@ -832,7 +870,7 @@ void StartDefaultTask(void *argument)
 		build_board_stat_msg(idx, E_NOMINAL, NULL, 0, &message);
 		can_send(&message);
 
-		osDelay(1000);
+		osDelay(500);
 	}
   /* USER CODE END 5 */
 }
@@ -850,8 +888,12 @@ void stateEstimationTask(void *argument)
   /* Infinite loop */
   for(;;)
   {
-	  idx++;
-    osDelay(100);
+	// Status message
+	char *pcStringToSend = "stateEstimate   Alive\r\n";
+	xMessageBufferSend(xStatusMessageBuffer, (void*)pcStringToSend, strlen(pcStringToSend ), 0);
+
+	idx++;
+    osDelay(10000);
   }
   /* USER CODE END stateEstimationTask */
 }
@@ -870,10 +912,14 @@ void controlTask(void *argument)
 	//TODO: Add controller gains and integral/derivative terms
 	//TODO: Add apogee target (and method to edit via CAN?)
 	uint32_t min_controller_frequency = 10; //10 Hz
-	uint32_t controller_delay_ticks = 1000 / min_controller_frequency / portTICK_RATE_MS; //equivalent FreeRTOS ticks
+	uint32_t controller_delay_ticks = 100000 / min_controller_frequency / portTICK_RATE_MS; //equivalent FreeRTOS ticks
   /* Infinite loop */
   for(;;)
   {
+	  // Status message
+	  	char *pcStringToSend = "controlTask     Alive\r\n";
+	  	xMessageBufferSend(xStatusMessageBuffer, (void*)pcStringToSend, strlen(pcStringToSend ), 0);
+
 	 //TODO: Fetch updated apogee estimate
 	 //TODO: Check flight phase flag
 		 //TODO: Calculate updated control output and clamp btw 0 and 1
@@ -896,7 +942,11 @@ void trajectoryEstimationTask(void *argument)
   /* Infinite loop */
   for(;;)
   {
-    osDelay(1000);
+	  // Status message
+	  	char *pcStringToSend = "trajectoryEst   Alive\r\n";
+	  	xMessageBufferSend(xStatusMessageBuffer, (void*)pcStringToSend, strlen(pcStringToSend ), 0);
+
+	  osDelay(1000);
   }
   /* USER CODE END trajectoryEstimationTask */
 }
@@ -915,10 +965,14 @@ void sdLogWriteTask(void *argument)
   /* Infinite loop */
   for(;;)
   {
+	  // Status message
+	  	char *pcStringToSend = "sdLogWrite      Alive\r\n";
+	  	xMessageBufferSend(xStatusMessageBuffer, (void*)pcStringToSend, strlen(pcStringToSend ), 0);
+
 	  //TODO: Open log file stream
 	  //TODO: Take data from log message buffer and write to SD card; figure out how to not get preempted
 	  //TODO: Close log file stream
-    osDelay(1000);
+    osDelay(10000);
   }
   /* USER CODE END sdLogWriteTask */
 }
@@ -936,10 +990,16 @@ void healthCheckTask(void *argument)
   /* Infinite loop */
   for(;;)
   {
+
+
+	// Status message
+	char *pcStringToSend = "healthCheck     Alive\r\n";
+	xMessageBufferSend(xStatusMessageBuffer, (void*)pcStringToSend, strlen(pcStringToSend ), 0);
+
 	//TODO: Read ADC channels
 	//TODO: convert ADC readings to target values
 	//TODO: push out of range errors to CAN bus; push values to bus in debug mode
-    osDelay(1000);
+    osDelay(10000);
   }
   /* USER CODE END healthCheckTask */
 }
@@ -958,11 +1018,15 @@ void flightPhaseTask(void *argument)
   /* Infinite loop */
   for(;;)
   {
-	//TODO: Check injector valve message (actually do it this time)
+	  // Status message
+	  char *pcStringToSend = "flightPhase     Alive\r\n";
+	  xMessageBufferSend(xStatusMessageBuffer, (void*)pcStringToSend, strlen(pcStringToSend ), 0);
+
+	  //TODO: Check injector valve message (actually do it this time)
 	//TODO: Start internal timer, check timer
 		//TODO: Set coast flag once timer has elapsed time from launch
 		//TODO: Set recovery flag once time has elapsed from launch
-    osDelay(1000);
+    osDelay(10000);
   }
   /* USER CODE END flightPhaseTask */
 }
