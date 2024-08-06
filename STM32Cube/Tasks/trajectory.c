@@ -101,8 +101,8 @@ void trajectory_task(void* argument) {
                         tan(angles.angle.pitch / 180.0 *
                             M_PI);  // state est measures pitch from horizontal
                     float apogee = getMaxAltitude_m(vely, velx, altTime.alt);
-                    logInfo("traj", "%fm", apogee);
                     xQueueOverwrite(apogeeQueue, &apogee);
+                    logInfo("traj", "%fm", apogee);
                 }
                 prev_alt = altTime.alt;
                 prev_time = altTime.time;

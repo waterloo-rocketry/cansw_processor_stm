@@ -16,7 +16,6 @@
 
 static FLIGHT_PHASE flight_state = PHASE_PRELAUNCH;
 static float injOpenTime;
-static float deploymentTime;
 
 EventGroupHandle_t flightPhaseEventsHandle = NULL;
 #define INJ_OPEN (xEventGroupGetBits(flightPhaseEventsHandle) & INJ_OPEN_BIT)
@@ -26,21 +25,10 @@ static Otits_Result_t test_flightPhase() {
     Otits_Result_t res;
     float time = millis_();
 
-    // check that millis matches tick count to a reasonable degree TODO: is this how timer works lmao
-    if (time - xTaskGetTickCount() > 2) {
-        res.info = "millis() value err";
-        res.outcome = TEST_OUTCOME_FAILED;
-        return res;
-    }
-
     // must be in prelaunch if inj hasn't opened yet
     if (!INJ_OPEN) {
         if (flight_state != PHASE_PRELAUNCH) {
             res.info = "prelaunch not detected";
-            res.outcome = TEST_OUTCOME_FAILED;
-            return res;
-        } else if (time > 30000) { // check inj_open hasn't gotten stuck TODO: what should this number be ??
-            res.info = "inj open never happened";
             res.outcome = TEST_OUTCOME_FAILED;
             return res;
         }

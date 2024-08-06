@@ -228,7 +228,6 @@
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/processor_board/Calculations}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/vnproglib/c/include}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/Fusion/Fusion}&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${workspace_loc:C:\Users\joedo\Documents\Rocketry\cansw_processor_stm\STM32Cube\Tasks}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/vnproglib/c/include/vn}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/Calculations}&quot;"/>
 								</option>

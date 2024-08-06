@@ -12,7 +12,8 @@ void can_handle_rx(const can_msg_t *message, uint32_t timestamp) {
 	//The timestamp parameter passed to the handler is some internal FDCAN thing that I don't know how to convert to a sensible value
 	//Just use millis_() for now
 	uint16_t msgType = get_message_type(message);
-	BaseType_t xHigherPriorityTaskWoken, result = pdFALSE;
+	BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+	BaseType_t result = pdFALSE;
 
 	switch(msgType) {
 	case MSG_LEDS_ON:
